@@ -163,13 +163,11 @@
   }
   .song-title { font-size: 0.9rem; font-weight: 600; }
   .song-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
-  .lang-badge {
-    background: var(--accent-glow);
-    color: var(--accent2);
-    padding: 1px 6px;
-    border-radius: 4px;
+  .joysound-badge {
     font-size: 0.7rem;
-    font-weight: 600;
+    color: var(--accent2);
+    font-family: monospace;
+    letter-spacing: 0.03em;
   }
   .empty-state {
     text-align: center;
@@ -560,7 +558,7 @@ function renderSongList(songs) {
       <div class="song-title">${esc(s.title)}</div>
       <div class="song-meta">
         <span>${esc(s.artist || '—')}</span>
-        <span class="lang-badge">${esc(s.language || '')}</span>
+        ${s.joysound_id ? `<span class="joysound-badge">#${esc(s.joysound_id)}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -585,8 +583,8 @@ function renderLyrics(song) {
         <h1>${esc(song.title)}</h1>
         <div class="artist">${esc(song.artist || '（未知歌手）')}</div>
         <div class="details">
-          <span class="detail-chip">🌐 ${esc(song.language || '—')}</span>
-          ${song.joysound_id ? `<span class="detail-chip">🎤 JOYSOUND: ${esc(song.joysound_id)}</span>` : ''}
+          ${song.joysound_id ? `<span class="detail-chip">🎤 #${esc(song.joysound_id)}</span>` : ''}
+          ${song.guide_vocal ? `<span class="detail-chip" style="color:var(--green)">🎙️ ガイドボーカル</span>` : ''}
         </div>
       </div>
       ${isAdmin ? `

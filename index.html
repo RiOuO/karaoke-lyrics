@@ -216,37 +216,32 @@
 /* ── Lyrics ── */
 #lyricsContent {
   font-size: 1.1rem;
-  line-height: 2.4;
-  word-break: break-word;
-  color: var(--text);
-  letter-spacing: .02em;
+  line-height: 2.3;
+  text-rendering: optimizeLegibility;
 }
 
 #lyricsContent .line {
   display: block;
 }
 
-/* ── Ruby ── */
 ruby {
   ruby-align: center;
   ruby-position: over;
+  vertical-align: bottom;
 }
 
 rt {
   font-size: 0.55em;
-  color: var(--accent2);
   line-height: 1;
-  user-select: none;
+  color: var(--accent2);
 }
 
-/* 改善 Windows 日文字型 */
 #lyricsContent,
 ruby,
 rt {
   font-family:
     "Yu Gothic",
     "Meiryo",
-    "Hiragino Sans",
     "Noto Sans JP",
     sans-serif;
 }

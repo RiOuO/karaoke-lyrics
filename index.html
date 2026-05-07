@@ -283,7 +283,7 @@ header {
 /* ───────────────────────────── */
 #lyricsContent {
   font-size: 1.4rem;
-  line-height: 1.5;
+  line-height: 1;
   text-rendering: optimizeLegibility;
   word-break: break-word;
 }
@@ -299,7 +299,7 @@ ruby {
 rt {
   font-size: .55em;
   line-height: 1;
-  color: var(--accent2);
+  color: #7dd184;
 }
 #lyricsContent,
 ruby,
@@ -559,8 +559,8 @@ function renderLyrics(song) {
       <h1>${esc(song.title)}</h1>
       <div class="artist">${esc(song.artist || '—')}</div>
       <div class="chips">
-        ${song.joysound_id ? `<span class="chip">🎤 #${esc(song.joysound_id)}</span>` : ''}
-        ${song.guide_vocal ? `<span class="chip" style="color:var(--green)">🎤 ガイドボーカル</span>` : ''}
+        ${song.joysound_id ? `<span class="chip"> #${esc(song.joysound_id)}</span>` : ''}
+        ${song.guide_vocal ? `<span class="chip" style="color:var(--green)"> ガイドボーカル</span>` : ''}
       </div>
     </div>
     <div id="lyricsContent">${

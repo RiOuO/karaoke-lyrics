@@ -215,17 +215,22 @@
   /* ── Lyrics ── */
   #lyricsContent {
     font-size: 1.1rem;
-    line-height: 3;
+    line-height: 1.4;
     word-break: break-word;
     color: var(--text);
     letter-spacing: .02em;
   }
-  #lyricsContent .line { display: block; min-height: 1em; }
+  /* 每行固定 padding-top 預留注音空間，有無 ruby 的行高都一致 */
+  #lyricsContent .line {
+    display: block;
+    min-height: 1em;
+    padding-top: 1.1em;
+  }
   #lyricsContent .no-lyrics { color: var(--muted); font-style: italic; font-size: .9rem; line-height: 1.5; }
 
   /* ── Ruby ── */
   ruby { ruby-align: center; }
-  rt { font-size: .52em; color: var(--accent2); letter-spacing: .04em; }
+  rt { font-size: .52em; color: var(--accent2); letter-spacing: .04em; line-height: 1; }
 
   /* ── States ── */
   .empty-state { text-align: center; padding: 40px 16px; color: var(--muted); }

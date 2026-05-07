@@ -376,26 +376,10 @@ function renderLyrics(song) {
 
 /* ── Ruby parser: 漢字[よみ] → <ruby> ── */
 function parseRuby(line) {
-  if (!line) return '';
-  const out = [];
-  let last = 0;
-  const re = /\[([^\[\]]+)\]/g;
-  let m;
-  while ((m = re.exec(line)) !== null) {
-    const before = line.slice(last, m.index);
-    const reading = m[1];
-    const km = before.match(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+)$/u);
-    if (km) {
-      out.push(esc(before.slice(0, before.length - km[0].length)));
-      out.push(`<ruby>${esc(km[0])}<rt>${esc(reading)}</rt></ruby>`);
-    } else {
-      out.push(esc(before));
-      out.push(`<ruby><rt>${esc(reading)}</rt></ruby>`);
-    }
-    last = m.index + m[0].length;
-  }
-  out.push(esc(line.slice(last)));
-  return out.join('');
+  return line.replace(
+    /([一-龯々ヶ]+)\[([^\]]+)\]/g,
+    '<ruby>$1<rt>$2</rt></ruby>'
+  );
 }
 
 /* ── Helpers ── */

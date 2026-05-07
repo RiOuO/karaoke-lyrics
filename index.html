@@ -237,16 +237,28 @@
 
   #lyricsContent {
     font-size: 1.15rem;
-    line-height: 2;
-    white-space: pre-wrap;
+    line-height: 3;
     word-break: break-word;
     color: var(--text);
     letter-spacing: 0.02em;
+  }
+  #lyricsContent .lyric-line {
+    display: block;
+    min-height: 1.2em;
   }
   #lyricsContent .no-lyrics {
     color: var(--text-muted);
     font-style: italic;
     font-size: 0.95rem;
+  }
+  /* 振り仮名 Ruby 樣式 */
+  ruby {
+    ruby-align: center;
+  }
+  rt {
+    font-size: 0.55em;
+    color: var(--accent2);
+    letter-spacing: 0.05em;
   }
 
   /* ── Modal ── */
@@ -463,7 +475,7 @@
     </div>
     <div class="form-group">
       <label>歌詞</label>
-      <textarea class="form-control" id="fLyrics" placeholder="在此貼上歌詞…"></textarea>
+      <textarea class="form-control" id="fLyrics" placeholder="在此貼上歌詞…&#10;振り仮名格式：漢字[よみ]&#10;例：夢[ゆめ]ならば どれほどよかったでしょう"></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('songModal')">取消</button>
@@ -585,7 +597,7 @@ function renderLyrics(song) {
     </div>
     <div id="lyricsContent">${
       song.lyrics
-        ? song.lyrics.split('\n').map(l => l ? `<div>${esc(l)}</div>` : '<div>&nbsp;</div>').join('')
+        ? song.lyrics.split('\n').map(l => l.trim() ? `<span class="lyric-line">${parseRuby(l)}</span>` : '<span class="lyric-line">&nbsp;</span>').join('')
         : '<div class="no-lyrics">尚未新增歌詞</div>'
     }</div>
   `;
@@ -723,6 +735,46 @@ function showToast(msg, type = 'success') {
 function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 將 漢字[よみ] 格式轉換成 <ruby> HTML
+// 範例輸入：夢[ゆめ]ならば どれほどよかった
+// 範例輸出：<ruby>夢<rt>ゆめ</rt></ruby>ならば どれほどよかった
+function parseRuby(line) {
+  if (!line) return '';
+  // 先 escape 整行，再還原 [brackets] 為 ruby
+  // 做法：先標記 ruby 段落再 escape 其餘文字
+  let result = '';
+  let i = 0;
+  while (i < line.length) {
+    // 找 漢字[よみ] 的模式：一個或多個非[字元，接著 [...]
+    const bracketIdx = line.indexOf('[', i);
+    if (bracketIdx === -1) {
+      result += esc(line.slice(i));
+      break;
+    }
+    const closeIdx = line.indexOf(']', bracketIdx);
+    if (closeIdx === -1) {
+      result += esc(line.slice(i));
+      break;
+    }
+    // bracketIdx 前面的文字：找漢字部分（往回找非假名/空白字元）
+    const before = line.slice(i, bracketIdx);
+    const reading = line.slice(bracketIdx + 1, closeIdx);
+
+    // 從 before 末尾抓出漢字群（連續的漢字/中文字）
+    const kanjiMatch = before.match(/([㐀-鿿豈-﫿]+)$/);
+    if (kanjiMatch) {
+      const prefix = before.slice(0, before.length - kanjiMatch[0].length);
+      result += esc(prefix);
+      result += `<ruby>${esc(kanjiMatch[0])}<rt>${esc(reading)}</rt></ruby>`;
+    } else {
+      result += esc(before);
+      result += `<ruby><rt>${esc(reading)}</rt></ruby>`;
+    }
+    i = closeIdx + 1;
+  }
+  return result;
 }
 
 function debounce(fn, ms) {

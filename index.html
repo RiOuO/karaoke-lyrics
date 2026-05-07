@@ -742,41 +742,28 @@ function esc(str) {
 // 範例輸出：<ruby>夢<rt>ゆめ</rt></ruby>ならば どれほどよかった
 function parseRuby(line) {
   if (!line) return '';
-  // 先 escape 整行，再還原 [brackets] 為 ruby
-  // 做法：先標記 ruby 段落再 escape 其餘文字
-  let result = '';
-  let i = 0;
-  while (i < line.length) {
-    // 找 漢字[よみ] 的模式：一個或多個非[字元，接著 [...]
-    const bracketIdx = line.indexOf('[', i);
-    if (bracketIdx === -1) {
-      result += esc(line.slice(i));
-      break;
-    }
-    const closeIdx = line.indexOf(']', bracketIdx);
-    if (closeIdx === -1) {
-      result += esc(line.slice(i));
-      break;
-    }
-    // bracketIdx 前面的文字：找漢字部分（往回找非假名/空白字元）
-    const before = line.slice(i, bracketIdx);
-    const reading = line.slice(bracketIdx + 1, closeIdx);
-
-    // 從 before 末尾抓出漢字群（連續的漢字/中文字）
-    const kanjiMatch = before.match(/([㐀-鿿豈-﫿]+)$/);
+  const result = [];
+  let lastIndex = 0;
+  const re = /\[([^\[\]]+)\]/g;
+  let m;
+  while ((m = re.exec(line)) !== null) {
+    const reading = m[1];
+    const beforeBracket = line.slice(lastIndex, m.index);
+    // CJK Unified \u4E00-\u9FFF + Extension A \u3400-\u4DBF + Compatibility \uF900-\uFAFF
+    const kanjiMatch = beforeBracket.match(/([\u3400-\u9FFF\uF900-\uFAFF]+)$/);
     if (kanjiMatch) {
-      const prefix = before.slice(0, before.length - kanjiMatch[0].length);
-      result += esc(prefix);
-      result += `<ruby>${esc(kanjiMatch[0])}<rt>${esc(reading)}</rt></ruby>`;
+      const prefix = beforeBracket.slice(0, beforeBracket.length - kanjiMatch[0].length);
+      result.push(esc(prefix));
+      result.push('<ruby>' + esc(kanjiMatch[0]) + '<rt>' + esc(reading) + '</rt></ruby>');
     } else {
-      result += esc(before);
-      result += `<ruby><rt>${esc(reading)}</rt></ruby>`;
+      result.push(esc(beforeBracket));
+      result.push('<ruby><rt>' + esc(reading) + '</rt></ruby>');
     }
-    i = closeIdx + 1;
+    lastIndex = m.index + m[0].length;
   }
-  return result;
+  result.push(esc(line.slice(lastIndex)));
+  return result.join('');
 }
-
 function debounce(fn, ms) {
   let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }

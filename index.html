@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎤 Karaoke Lyrics Viewer</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --surface: #1a1a2e;
+    --surface2: #16213e;
+    --border: #2a2a4a;
+    --accent: #7c3aed;
+    --accent2: #a855f7;
+    --accent-glow: rgba(124, 58, 237, 0.3);
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+  }
+  .search-wrap {
+    flex: 1;
+    position: relative;
+    max-width: 560px;
+  }
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 1rem;
+  }
+  #searchInput {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px 10px 38px;
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #searchInput:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  #searchInput::placeholder { color: var(--text-muted); }
+
+  .header-actions { display: flex; gap: 8px; margin-left: auto; }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent2); box-shadow: 0 0 12px var(--accent-glow); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+  .btn-danger {
+    background: var(--red);
+    color: white;
+  }
+  .btn-danger:hover { opacity: 0.85; }
+  .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 65px);
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 300px;
+    min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-title { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  #songCount { font-size: 0.8rem; color: var(--accent2); font-weight: 600; }
+
+  #songList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  #songList::-webkit-scrollbar { width: 4px; }
+  #songList::-webkit-scrollbar-track { background: transparent; }
+  #songList::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .song-item {
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+  }
+  .song-item:hover { background: var(--surface2); }
+  .song-item.active {
+    background: var(--surface2);
+    border-color: var(--accent);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .song-title { font-size: 0.9rem; font-weight: 600; }
+  .song-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+  .lang-badge {
+    background: var(--accent-glow);
+    color: var(--accent2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 40px 16px;
+    color: var(--text-muted);
+  }
+  .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+  /* ── Main Panel ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .lyrics-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+  }
+  .lyrics-panel::-webkit-scrollbar { width: 4px; }
+  .lyrics-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--text-muted);
+  }
+  .welcome-icon { font-size: 4rem; margin-bottom: 16px; opacity: 0.5; }
+  .welcome h2 { font-size: 1.4rem; margin-bottom: 8px; color: var(--text); opacity: 0.7; }
+  .welcome p { font-size: 0.9rem; }
+
+  .song-header {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .song-header-info h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #e2e8f0, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .song-header-info .artist { color: var(--text-muted); font-size: 1rem; }
+  .song-header-info .details { display: flex; gap: 12px; margin-top: 8px; align-items: center; }
+  .detail-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .song-actions { display: flex; gap: 8px; }
+
+  #lyricsContent {
+    font-size: 1.15rem;
+    line-height: 2;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  #lyricsContent .no-lyrics {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.95rem;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .form-control {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .form-control:focus { border-color: var(--accent); }
+  textarea.form-control { resize: vertical; min-height: 200px; line-height: 1.8; }
+  select.form-control { cursor: pointer; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+  /* ── Auth Modal ── */
+  .auth-form { max-width: 360px; }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    animation: slideIn 0.25s ease;
+    min-width: 220px;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--red); }
+  @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
+
+  /* ── Config Banner ── */
+  #configBanner {
+    background: linear-gradient(135deg, #7c3aed22, #a855f722);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 20px;
+    font-size: 0.875rem;
+    display: none;
+  }
+  #configBanner code {
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: var(--accent2);
+  }
+
+  /* ── Loading ── */
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-state { display: flex; align-items: center; gap: 10px; justify-content: center; padding: 32px; color: var(--text-muted); }
+
+  /* ── User indicator ── */
+  .user-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+  .user-info { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- Config Banner -->
+<div id="configBanner">
+  ⚙️ 請先設定 Supabase 連線！編輯此檔案，將 <code>SUPABASE_URL</code> 與 <code>SUPABASE_ANON_KEY</code> 替換成你的值。
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">🎤 KaraokeDB</div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜尋歌名或歌手…" autocomplete="off">
+  </div>
+  <div class="header-actions" id="headerActions">
+    <div class="user-info" id="userInfo" style="display:none">
+      <div class="user-dot"></div>
+      <span id="userEmail"></span>
+    </div>
+    <button class="btn btn-primary" id="addBtn" style="display:none" onclick="openAddModal()">+ 新增歌曲</button>
+    <button class="btn btn-ghost" id="loginBtn" onclick="openAuthModal()">管理員登入</button>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none" onclick="logout()">登出</button>
+  </div>
+</header>
+
+<!-- App -->
+<div class="app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">歌曲列表</span>
+      <span id="songCount">--</span>
+    </div>
+    <div id="songList">
+      <div class="loading-state"><div class="spinner"></div> 載入中…</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="lyrics-panel" id="lyricsPanel">
+      <div class="welcome">
+        <div class="welcome-icon">🎵</div>
+        <h2>選擇一首歌來查看歌詞</h2>
+        <p>從左側清單選擇，或使用搜尋功能找歌</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Song Modal (Add / Edit) -->
+<div class="modal-overlay" id="songModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">➕ 新增歌曲</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>歌名 *</label>
+        <input class="form-control" id="fTitle" placeholder="例：Lemon" required>
+      </div>
+      <div class="form-group">
+        <label>歌手</label>
+        <input class="form-control" id="fArtist" placeholder="例：米津玄師">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>語言</label>
+        <select class="form-control" id="fLanguage">
+          <option value="Japanese">Japanese</option>
+          <option value="Mandarin">Mandarin</option>
+          <option value="Cantonese">Cantonese</option>
+          <option value="English">English</option>
+          <option value="Korean">Korean</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>JOYSOUND 編號</label>
+        <input class="form-control" id="fJoysound" placeholder="例：765432">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>歌詞</label>
+      <textarea class="form-control" id="fLyrics" placeholder="在此貼上歌詞…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('songModal')">取消</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveSong()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal auth-form">
+    <div class="modal-title">🔐 管理員登入</div>
+    <div class="form-group">
+      <label>Email</label>
+      <input class="form-control" id="authEmail" type="email" placeholder="your@email.com">
+    </div>
+    <div class="form-group">
+      <label>密碼</label>
+      <input class="form-control" id="authPassword" type="password" placeholder="••••••••">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('authModal')">取消</button>
+      <button class="btn btn-primary" onclick="login()">登入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ══════════════════════════════════════════
+// ⚙️  設定區 — 請替換成你自己的 Supabase 資訊
+// ══════════════════════════════════════════
+const SUPABASE_URL  = 'https://etocohuudhedrepviopc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0b2NvaHV1ZGhlZHJlcHZpb3BjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTI0MTYsImV4cCI6MjA5MzY2ODQxNn0.rrOYAtzfq4FeLNVL0SIflKqZwwhTD_dNybWTdYEbkdo';
+// ══════════════════════════════════════════
+
+let supabase, currentSong = null, currentUser = null, editingId = null, allSongs = [];
+
+// 初始化
+window.addEventListener('DOMContentLoaded', () => {
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+    document.getElementById('configBanner').style.display = 'block';
+    document.getElementById('songList').innerHTML = `<div class="empty-state"><div class="empty-icon">⚙️</div><p>請先設定 Supabase 連線</p></div>`;
+    return;
+  }
+
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  checkSession();
+  loadSongs();
+
+  document.getElementById('searchInput').addEventListener('input', debounce(handleSearch, 300));
+});
+
+// ── 資料 ──
+async function loadSongs(query = '') {
+  const list = document.getElementById('songList');
+  list.innerHTML = `<div class="loading-state"><div class="spinner"></div> 載入中…</div>`;
+
+  let req = supabase.from('songs').select('id, title, artist, language, joysound_id').order('title');
+  if (query) {
+    req = req.or(`title.ilike.%${query}%,artist.ilike.%${query}%`);
+  }
+
+  const { data, error } = await req;
+  if (error) { showToast('讀取失敗：' + error.message, 'error'); return; }
+
+  allSongs = data || [];
+  document.getElementById('songCount').textContent = allSongs.length + ' 首';
+  renderSongList(allSongs);
+}
+
+function renderSongList(songs) {
+  const list = document.getElementById('songList');
+  if (!songs.length) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎵</div><p>沒有找到歌曲</p></div>`;
+    return;
+  }
+  list.innerHTML = songs.map(s => `
+    <div class="song-item ${currentSong?.id === s.id ? 'active' : ''}" onclick="selectSong('${s.id}')">
+      <div class="song-title">${esc(s.title)}</div>
+      <div class="song-meta">
+        <span>${esc(s.artist || '—')}</span>
+        <span class="lang-badge">${esc(s.language || '')}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function selectSong(id) {
+  document.querySelectorAll('.song-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget?.classList.add('active');
+
+  const { data, error } = await supabase.from('songs').select('*').eq('id', id).single();
+  if (error) { showToast('讀取歌詞失敗', 'error'); return; }
+  currentSong = data;
+  renderLyrics(data);
+}
+
+function renderLyrics(song) {
+  const panel = document.getElementById('lyricsPanel');
+  const isAdmin = !!currentUser;
+  panel.innerHTML = `
+    <div class="song-header">
+      <div class="song-header-info">
+        <h1>${esc(song.title)}</h1>
+        <div class="artist">${esc(song.artist || '（未知歌手）')}</div>
+        <div class="details">
+          <span class="detail-chip">🌐 ${esc(song.language || '—')}</span>
+          ${song.joysound_id ? `<span class="detail-chip">🎤 JOYSOUND: ${esc(song.joysound_id)}</span>` : ''}
+        </div>
+      </div>
+      ${isAdmin ? `
+      <div class="song-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openEditModal()">✏️ 編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSong('${song.id}')">🗑️</button>
+      </div>` : ''}
+    </div>
+    <div id="lyricsContent">${
+      song.lyrics
+        ? song.lyrics.split('\n').map(l => l ? `<div>${esc(l)}</div>` : '<div>&nbsp;</div>').join('')
+        : '<div class="no-lyrics">尚未新增歌詞</div>'
+    }</div>
+  `;
+}
+
+async function deleteSong(id) {
+  if (!confirm('確定要刪除這首歌嗎？')) return;
+  const { error } = await supabase.from('songs').delete().eq('id', id);
+  if (error) { showToast('刪除失敗', 'error'); return; }
+  showToast('已刪除', 'success');
+  currentSong = null;
+  document.getElementById('lyricsPanel').innerHTML = `<div class="welcome"><div class="welcome-icon">🎵</div><h2>選擇一首歌來查看歌詞</h2></div>`;
+  loadSongs();
+}
+
+// ── 搜尋 ──
+function handleSearch(e) {
+  const q = e.target.value.trim();
+  loadSongs(q);
+}
+
+// ── Auth ──
+async function checkSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) setUser(session.user);
+
+  supabase.auth.onAuthStateChange((_, session) => {
+    if (session) setUser(session.user);
+    else clearUser();
+  });
+}
+
+function setUser(user) {
+  currentUser = user;
+  document.getElementById('userInfo').style.display = 'flex';
+  document.getElementById('userEmail').textContent = user.email;
+  document.getElementById('addBtn').style.display = 'block';
+  document.getElementById('loginBtn').style.display = 'none';
+  document.getElementById('logoutBtn').style.display = 'block';
+  if (currentSong) renderLyrics(currentSong);
+}
+
+function clearUser() {
+  currentUser = null;
+  document.getElementById('userInfo').style.display = 'none';
+  document.getElementById('addBtn').style.display = 'none';
+  document.getElementById('loginBtn').style.display = 'block';
+  document.getElementById('logoutBtn').style.display = 'none';
+  if (currentSong) renderLyrics(currentSong);
+}
+
+async function login() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPassword').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error) { showToast('登入失敗：' + error.message, 'error'); return; }
+  showToast('登入成功！', 'success');
+  closeModal('authModal');
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+  showToast('已登出', 'success');
+}
+
+// ── 新增 / 編輯 Modal ──
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = '➕ 新增歌曲';
+  ['fTitle','fArtist','fLyrics','fJoysound'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fLanguage').value = 'Japanese';
+  openModal('songModal');
+}
+
+function openEditModal() {
+  if (!currentSong) return;
+  editingId = currentSong.id;
+  document.getElementById('modalTitle').textContent = '✏️ 編輯歌曲';
+  document.getElementById('fTitle').value     = currentSong.title || '';
+  document.getElementById('fArtist').value    = currentSong.artist || '';
+  document.getElementById('fLanguage').value  = currentSong.language || 'Japanese';
+  document.getElementById('fJoysound').value  = currentSong.joysound_id || '';
+  document.getElementById('fLyrics').value    = currentSong.lyrics || '';
+  openModal('songModal');
+}
+
+async function saveSong() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { showToast('請輸入歌名', 'error'); return; }
+
+  const payload = {
+    title,
+    artist:      document.getElementById('fArtist').value.trim() || null,
+    language:    document.getElementById('fLanguage').value,
+    joysound_id: document.getElementById('fJoysound').value.trim() || null,
+    lyrics:      document.getElementById('fLyrics').value.trim() || null,
+  };
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = '儲存中…';
+
+  let error;
+  if (editingId) {
+    ({ error } = await supabase.from('songs').update(payload).eq('id', editingId));
+  } else {
+    ({ error } = await supabase.from('songs').insert(payload));
+  }
+
+  btn.disabled = false; btn.textContent = '💾 儲存';
+
+  if (error) { showToast('儲存失敗：' + error.message, 'error'); return; }
+  showToast(editingId ? '已更新！' : '已新增！', 'success');
+  closeModal('songModal');
+  await loadSongs();
+  if (editingId) {
+    const updated = allSongs.find(s => s.id === editingId);
+    if (updated) { currentSong = { ...currentSong, ...payload }; renderLyrics(currentSong); }
+  }
+}
+
+// ── Helpers ──
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openAuthModal(){ openModal('authModal'); }
+
+function showToast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${esc(msg)}`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+</script>
+</body>
+</html>

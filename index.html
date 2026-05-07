@@ -213,24 +213,43 @@
   }
 
   /* ── Lyrics ── */
-  #lyricsContent {
-    font-size: 1.1rem;
-    line-height: 1.4;
-    word-break: break-word;
-    color: var(--text);
-    letter-spacing: .02em;
-  }
-  /* 每行固定 padding-top 預留注音空間，有無 ruby 的行高都一致 */
-  #lyricsContent .line {
-    display: block;
-    min-height: 1em;
-    padding-top: 1.1em;
-  }
-  #lyricsContent .no-lyrics { color: var(--muted); font-style: italic; font-size: .9rem; line-height: 1.5; }
+/* ── Lyrics ── */
+#lyricsContent {
+  font-size: 1.1rem;
+  line-height: 2.4;
+  word-break: break-word;
+  color: var(--text);
+  letter-spacing: .02em;
+}
 
-  /* ── Ruby ── */
-  ruby { ruby-align: center; }
-  rt { font-size: .52em; color: var(--accent2); letter-spacing: .04em; line-height: 1; }
+#lyricsContent .line {
+  display: block;
+}
+
+/* ── Ruby ── */
+ruby {
+  ruby-align: center;
+  ruby-position: over;
+}
+
+rt {
+  font-size: 0.55em;
+  color: var(--accent2);
+  line-height: 1;
+  user-select: none;
+}
+
+/* 改善 Windows 日文字型 */
+#lyricsContent,
+ruby,
+rt {
+  font-family:
+    "Yu Gothic",
+    "Meiryo",
+    "Hiragino Sans",
+    "Noto Sans JP",
+    sans-serif;
+}
 
   /* ── States ── */
   .empty-state { text-align: center; padding: 40px 16px; color: var(--muted); }
@@ -370,7 +389,7 @@ function parseRuby(line) {
   while ((m = re.exec(line)) !== null) {
     const before = line.slice(last, m.index);
     const reading = m[1];
-    const km = before.match(/([㐀-鿿豈-﫿]+)$/);
+    const km = before.match(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]+)$/u);
     if (km) {
       out.push(esc(before.slice(0, before.length - km[0].length)));
       out.push(`<ruby>${esc(km[0])}<rt>${esc(reading)}</rt></ruby>`);

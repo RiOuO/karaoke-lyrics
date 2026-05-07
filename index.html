@@ -163,6 +163,17 @@
   }
   .song-title { font-size: 0.9rem; font-weight: 600; }
   .song-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+  .song-num {
+    font-size: 0.7rem;
+    color: var(--border);
+    font-family: monospace;
+    font-weight: 700;
+    min-width: 22px;
+  }
+  .guide-dot {
+    font-size: 0.75rem;
+    vertical-align: middle;
+  }
   .joysound-badge {
     font-size: 0.7rem;
     color: var(--accent2);
@@ -456,17 +467,6 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>語言</label>
-        <select class="form-control" id="fLanguage">
-          <option value="Japanese">Japanese</option>
-          <option value="Mandarin">Mandarin</option>
-          <option value="Cantonese">Cantonese</option>
-          <option value="English">English</option>
-          <option value="Korean">Korean</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="form-group">
         <label>JOYSOUND 編號</label>
         <input class="form-control" id="fJoysound" placeholder="例：765432">
       </div>
@@ -534,7 +534,7 @@ async function loadSongs(query = '') {
   const list = document.getElementById('songList');
   list.innerHTML = `<div class="loading-state"><div class="spinner"></div> 載入中…</div>`;
 
-  let req = db.from('songs').select('id, title, artist, language, joysound_id').order('title');
+  let req = db.from('songs').select('id, title, artist, joysound_id, guide_vocal').order('title');
   if (query) {
     req = req.or(`title.ilike.%${query}%,artist.ilike.%${query}%`);
   }
@@ -553,12 +553,12 @@ function renderSongList(songs) {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">🎵</div><p>沒有找到歌曲</p></div>`;
     return;
   }
-  list.innerHTML = songs.map(s => `
+  list.innerHTML = songs.map((s, i) => `
     <div class="song-item ${currentSong?.id === s.id ? 'active' : ''}" onclick="selectSong('${s.id}')">
-      <div class="song-title">${esc(s.title)}</div>
+      <div class="song-title">${esc(s.title)} ${s.guide_vocal ? '<span class="guide-dot" title="ガイドボーカル">🎙️</span>' : ''}</div>
       <div class="song-meta">
+        <span class="song-num">${String(i + 1).padStart(2, '0')}</span>
         <span>${esc(s.artist || '—')}</span>
-        ${s.joysound_id ? `<span class="joysound-badge">#${esc(s.joysound_id)}</span>` : ''}
       </div>
     </div>
   `).join('');
@@ -666,7 +666,7 @@ function openAddModal() {
   editingId = null;
   document.getElementById('modalTitle').textContent = '➕ 新增歌曲';
   ['fTitle','fArtist','fLyrics','fJoysound'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fLanguage').value = 'Japanese';
+  
   openModal('songModal');
 }
 
@@ -676,7 +676,7 @@ function openEditModal() {
   document.getElementById('modalTitle').textContent = '✏️ 編輯歌曲';
   document.getElementById('fTitle').value     = currentSong.title || '';
   document.getElementById('fArtist').value    = currentSong.artist || '';
-  document.getElementById('fLanguage').value  = currentSong.language || 'Japanese';
+  
   document.getElementById('fJoysound').value  = currentSong.joysound_id || '';
   document.getElementById('fLyrics').value    = currentSong.lyrics || '';
   openModal('songModal');
@@ -689,7 +689,6 @@ async function saveSong() {
   const payload = {
     title,
     artist:      document.getElementById('fArtist').value.trim() || null,
-    language:    document.getElementById('fLanguage').value,
     joysound_id: document.getElementById('fJoysound').value.trim() || null,
     lyrics:      document.getElementById('fLyrics').value.trim() || null,
   };

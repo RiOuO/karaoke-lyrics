@@ -502,7 +502,7 @@ const SUPABASE_URL  = 'https://etocohuudhedrepviopc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0b2NvaHV1ZGhlZHJlcHZpb3BjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwOTI0MTYsImV4cCI6MjA5MzY2ODQxNn0.rrOYAtzfq4FeLNVL0SIflKqZwwhTD_dNybWTdYEbkdo';
 // ══════════════════════════════════════════
 
-let supabase, currentSong = null, currentUser = null, editingId = null, allSongs = [];
+let db, currentSong = null, currentUser = null, editingId = null, allSongs = [];
 
 // 初始化
 window.addEventListener('DOMContentLoaded', () => {
@@ -512,7 +512,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   checkSession();
   loadSongs();
 
@@ -524,7 +524,7 @@ async function loadSongs(query = '') {
   const list = document.getElementById('songList');
   list.innerHTML = `<div class="loading-state"><div class="spinner"></div> 載入中…</div>`;
 
-  let req = supabase.from('songs').select('id, title, artist, language, joysound_id').order('title');
+  let req = db.from('songs').select('id, title, artist, language, joysound_id').order('title');
   if (query) {
     req = req.or(`title.ilike.%${query}%,artist.ilike.%${query}%`);
   }
@@ -558,7 +558,7 @@ async function selectSong(id) {
   document.querySelectorAll('.song-item').forEach(el => el.classList.remove('active'));
   event.currentTarget?.classList.add('active');
 
-  const { data, error } = await supabase.from('songs').select('*').eq('id', id).single();
+  const { data, error } = await db.from('songs').select('*').eq('id', id).single();
   if (error) { showToast('讀取歌詞失敗', 'error'); return; }
   currentSong = data;
   renderLyrics(data);
@@ -593,7 +593,7 @@ function renderLyrics(song) {
 
 async function deleteSong(id) {
   if (!confirm('確定要刪除這首歌嗎？')) return;
-  const { error } = await supabase.from('songs').delete().eq('id', id);
+  const { error } = await db.from('songs').delete().eq('id', id);
   if (error) { showToast('刪除失敗', 'error'); return; }
   showToast('已刪除', 'success');
   currentSong = null;
@@ -609,10 +609,10 @@ function handleSearch(e) {
 
 // ── Auth ──
 async function checkSession() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await db.auth.getSession();
   if (session) setUser(session.user);
 
-  supabase.auth.onAuthStateChange((_, session) => {
+  db.auth.onAuthStateChange((_, session) => {
     if (session) setUser(session.user);
     else clearUser();
   });
@@ -640,14 +640,14 @@ function clearUser() {
 async function login() {
   const email = document.getElementById('authEmail').value.trim();
   const pass  = document.getElementById('authPassword').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
   if (error) { showToast('登入失敗：' + error.message, 'error'); return; }
   showToast('登入成功！', 'success');
   closeModal('authModal');
 }
 
 async function logout() {
-  await supabase.auth.signOut();
+  await db.auth.signOut();
   showToast('已登出', 'success');
 }
 
@@ -689,9 +689,9 @@ async function saveSong() {
 
   let error;
   if (editingId) {
-    ({ error } = await supabase.from('songs').update(payload).eq('id', editingId));
+    ({ error } = await db.from('songs').update(payload).eq('id', editingId));
   } else {
-    ({ error } = await supabase.from('songs').insert(payload));
+    ({ error } = await db.from('songs').insert(payload));
   }
 
   btn.disabled = false; btn.textContent = '💾 儲存';

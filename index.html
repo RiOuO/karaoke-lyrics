@@ -1119,7 +1119,7 @@ async function loadCoverArt(title, artist) {
   const urls = [
     apiUrl,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
   ];
   let data;
   const errors = [];

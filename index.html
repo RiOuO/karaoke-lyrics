@@ -1100,14 +1100,18 @@ async function loadCoverArt(title, artist) {
     `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
   ];
   let data;
+  const log = [];
   for (const url of urls) {
+    const label = url.includes('allorigins') ? 'allorigins' : url.includes('corsproxy') ? 'corsproxy' : 'direct';
     try {
       const res  = await fetch(url);
       const json = await res.json();
-      if (json && json.results && json.results.length) { data = json; break; }
-    } catch { continue; }
+      if (json && json.results && json.results.length) { data = json; log.push(`✓${label}`); break; }
+      log.push(`${label}:0筆`);
+    } catch (e) { log.push(`${label}:${e.message.slice(0,12)}`); }
   }
-  if (!data) { showToast(`找不到：${title}`, 'error'); return; }
+  if (!data) { showToast(`[${log.join(' ')}]`, 'error'); return; }
+  showToast(`✓ ${log[log.length-1]}`, 'success');
   const hit = data.results[0];
   if (hit.artworkUrl100) {
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');

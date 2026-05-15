@@ -1086,40 +1086,42 @@ function renderLyrics(song) {
     }</div>`;
   loadCoverArt(song.title, song.artist);
 }
-function loadCoverArt(title, artist) {
+async function loadCoverArt(title, artist) {
   const img = document.getElementById('coverImg');
   const ph  = document.getElementById('coverPlaceholder');
   const btn = document.getElementById('appleMusicBtn');
   if (!img) return;
   const q = encodeURIComponent(`${artist || ''} ${title}`);
-  const cbName = 'itcb_' + Date.now();
-  const script = document.createElement('script');
-  script.src = `https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW&callback=${cbName}`;
-  window[cbName] = (data) => {
-    delete window[cbName];
-    script.remove();
-    const results = data && data.results;
-    if (!results || !results.length) return;
-    const hit = results[0];
-    const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
-    img.onload = () => {
-      img.classList.add('loaded');
-      if (ph) ph.style.opacity = '0';
-    };
-    img.onerror = () => {};
-    img.src = art;
-    if (btn && hit.trackViewUrl) {
-      btn.href = hit.trackViewUrl;
-      btn.style.display = 'inline-flex';
-    }
-    const previewBtn = document.getElementById('previewBtn');
-    if (previewBtn && hit.previewUrl) {
-      currentPreviewUrl = hit.previewUrl;
-      previewBtn.style.display = 'inline-flex';
-    }
+  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`;
+  let data;
+  try {
+    const res = await fetch(apiUrl);
+    data = await res.json();
+  } catch {
+    try {
+      const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`);
+      data = await res.json();
+    } catch { return; }
+  }
+  const results = data && data.results;
+  if (!results || !results.length) return;
+  const hit = results[0];
+  const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
+  img.onload = () => {
+    img.classList.add('loaded');
+    if (ph) ph.style.opacity = '0';
   };
-  script.onerror = () => { delete window[cbName]; script.remove(); };
-  document.body.appendChild(script);
+  img.onerror = () => {};
+  img.src = art;
+  if (btn && hit.trackViewUrl) {
+    btn.href = hit.trackViewUrl;
+    btn.style.display = 'inline-flex';
+  }
+  const previewBtn = document.getElementById('previewBtn');
+  if (previewBtn && hit.previewUrl) {
+    currentPreviewUrl = hit.previewUrl;
+    previewBtn.style.display = 'inline-flex';
+  }
 }
 function togglePreview() {
   if (!currentPreviewUrl) return;

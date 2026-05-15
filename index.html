@@ -1110,19 +1110,20 @@ function applyMediaInfo(song) {
 }
 async function itunesFetch(term, country) {
   const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=5&country=${country}`;
-  const urls = [
-    apiUrl,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-    `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-  ];
-  for (const url of urls) {
-    try {
-      const res  = await fetch(url);
-      const json = await res.json();
+  const timeout = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 6000));
+  const tryUrl = (url) => Promise.race([
+    fetch(url).then(r => r.json()).then(json => {
       if (json && json.results && json.results.length) return json.results;
-    } catch { continue; }
-  }
-  return [];
+      throw new Error('empty');
+    }),
+    timeout,
+  ]);
+  try {
+    return await Promise.any([
+      tryUrl(apiUrl),
+      tryUrl(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`),
+    ]);
+  } catch { return []; }
 }
 async function loadCoverArt(title, artist) {
   const img        = document.getElementById('coverImg');

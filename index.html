@@ -1084,44 +1084,61 @@ function renderLyrics(song) {
             `<span class="line">${l.trim() ? parseRuby(l) : '&nbsp;'}</span>`).join('')
         : '<span class="no-lyrics">尚未新增歌詞</span>'
     }</div>`;
-  loadCoverArt(song.title, song.artist);
+  applyMediaInfo(song);
 }
-async function loadCoverArt(title, artist) {
-  const img = document.getElementById('coverImg');
-  const ph  = document.getElementById('coverPlaceholder');
-  const btn = document.getElementById('appleMusicBtn');
-  if (!img) return;
-  const q = encodeURIComponent(`${artist || ''} ${title}`);
-  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`;
-  let data;
-  try {
-    const res = await fetch(apiUrl);
-    data = await res.json();
-  } catch {
-    try {
-      const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`);
-      data = await res.json();
-    } catch { return; }
+function applyMediaInfo(song) {
+  const img        = document.getElementById('coverImg');
+  const ph         = document.getElementById('coverPlaceholder');
+  const btn        = document.getElementById('appleMusicBtn');
+  const previewBtn = document.getElementById('previewBtn');
+  if (song.artwork_url && img) {
+    img.onload  = () => { img.classList.add('loaded'); if (ph) ph.style.opacity = '0'; };
+    img.onerror = () => {};
+    img.src = song.artwork_url;
   }
-  const results = data && data.results;
-  if (!results || !results.length) return;
-  const hit = results[0];
-  const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
-  img.onload = () => {
-    img.classList.add('loaded');
-    if (ph) ph.style.opacity = '0';
-  };
-  img.onerror = () => {};
-  img.src = art;
-  if (btn && hit.trackViewUrl) {
-    btn.href = hit.trackViewUrl;
+  if (btn && song.apple_music_url) {
+    btn.href = song.apple_music_url;
     btn.style.display = 'inline-flex';
   }
-  const previewBtn = document.getElementById('previewBtn');
-  if (previewBtn && hit.previewUrl) {
-    currentPreviewUrl = hit.previewUrl;
+  if (previewBtn && song.preview_url) {
+    currentPreviewUrl = song.preview_url;
     previewBtn.style.display = 'inline-flex';
   }
+  if (!song.artwork_url && !song.apple_music_url && !song.preview_url) {
+    loadCoverArt(song.title, song.artist);
+  }
+}
+async function loadCoverArt(title, artist) {
+  const img        = document.getElementById('coverImg');
+  const ph         = document.getElementById('coverPlaceholder');
+  const btn        = document.getElementById('appleMusicBtn');
+  const previewBtn = document.getElementById('previewBtn');
+  if (!img) return;
+  const q      = encodeURIComponent(`${artist || ''} ${title}`);
+  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`;
+  const urls = [
+    apiUrl,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`,
+  ];
+  let data;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json && json.results) { data = json; break; }
+    } catch { continue; }
+  }
+  if (!data || !data.results || !data.results.length) return;
+  const hit = data.results[0];
+  if (hit.artworkUrl100) {
+    const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
+    img.onload  = () => { img.classList.add('loaded'); if (ph) ph.style.opacity = '0'; };
+    img.onerror = () => {};
+    img.src = art;
+  }
+  if (btn && hit.trackViewUrl) { btn.href = hit.trackViewUrl; btn.style.display = 'inline-flex'; }
+  if (previewBtn && hit.previewUrl) { currentPreviewUrl = hit.previewUrl; previewBtn.style.display = 'inline-flex'; }
 }
 function togglePreview() {
   if (!currentPreviewUrl) return;

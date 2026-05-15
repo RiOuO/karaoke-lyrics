@@ -447,6 +447,9 @@ header {
   opacity: 0;
   z-index: 0;
 }
+@media (hover: none) {
+  .hover-pill { display: none; }
+}
 [data-theme="light"] .hover-pill {
   background: rgba(0,0,0,0.05);
 }
@@ -847,11 +850,9 @@ rt {
   to { transform: rotate(360deg); }
 }
 @keyframes pill-pop {
-  0%   { opacity: 0; transform: var(--pill-pos) scale(0.4); }
-  50%  { opacity: 1; transform: var(--pill-pos) scale(1.28); }
-  68%  { transform: var(--pill-pos) scale(0.85); }
-  82%  { transform: var(--pill-pos) scale(1.12); }
-  92%  { transform: var(--pill-pos) scale(0.96); }
+  0%   { opacity: 0; transform: var(--pill-pos) scale(0.88); }
+  55%  { opacity: 1; transform: var(--pill-pos) scale(1.04); }
+  78%  { transform: var(--pill-pos) scale(0.98); }
   100% { transform: var(--pill-pos) scale(1); }
 }
 /* ───────────────────────────── */
@@ -1162,11 +1163,10 @@ function slidePill(el) {
   pill.style.height = `${el.offsetHeight}px`;
   pill.style.setProperty('--pill-pos', `translateY(${el.offsetTop}px)`);
   pill.offsetHeight;
-  pill.style.animation = 'pill-pop 0.52s ease forwards';
+  pill.style.animation = 'pill-pop 0.36s ease forwards';
 }
 async function pickSong(id, el) {
   stopPreview();
-  resetFogColor();
   if (el) slidePill(el);
   const { data, error } = await db.from('songs').select('*').eq('id', id).single();
   if (error) { showToast('讀取失敗', 'error'); return; }
@@ -1261,7 +1261,12 @@ function applyFogColor(r, g, b) {
   }, 600);
 }
 function resetFogColor() {
-  document.querySelectorAll('.fog-blob').forEach(b => b.style.background = '');
+  const overlay = document.getElementById('fog-overlay');
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    document.querySelectorAll('.fog-blob').forEach(b => b.style.background = '');
+    overlay.style.opacity = '1';
+  }, 600);
 }
 async function loadCoverArt(title, artist) {
   const token = ++coverArtToken;
@@ -1283,7 +1288,7 @@ async function loadCoverArt(title, artist) {
       } catch { continue; }
     }
     if (!data) {
-      if (gotResponse) return;
+      if (gotResponse) { resetFogColor(); return; }
       await new Promise(r => setTimeout(r, 3000));
     }
   }
@@ -1301,6 +1306,7 @@ async function loadCoverArt(title, artist) {
       if (ph) ph.style.opacity = '0';
       const color = extractDominantColor(img);
       if (color) applyFogColor(...color);
+      else resetFogColor();
     };
     img.onerror = () => {};
     img.src = art;

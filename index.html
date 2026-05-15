@@ -1112,6 +1112,7 @@ async function itunesFetch(term, country) {
   const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=5&country=${country}`;
   const urls = [
     apiUrl,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
     `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
   ];
   for (const url of urls) {

@@ -1086,15 +1086,19 @@ function renderLyrics(song) {
     }</div>`;
   loadCoverArt(song.title, song.artist);
 }
-async function loadCoverArt(title, artist) {
+function loadCoverArt(title, artist) {
   const img = document.getElementById('coverImg');
   const ph  = document.getElementById('coverPlaceholder');
   const btn = document.getElementById('appleMusicBtn');
   if (!img) return;
-  try {
-    const q   = encodeURIComponent(`${artist || ''} ${title}`);
-    const res = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`, { credentials: 'omit', mode: 'cors' });
-    const { results } = await res.json();
+  const q = encodeURIComponent(`${artist || ''} ${title}`);
+  const cbName = 'itcb_' + Date.now();
+  const script = document.createElement('script');
+  script.src = `https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW&callback=${cbName}`;
+  window[cbName] = (data) => {
+    delete window[cbName];
+    script.remove();
+    const results = data && data.results;
     if (!results || !results.length) return;
     const hit = results[0];
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
@@ -1113,7 +1117,9 @@ async function loadCoverArt(title, artist) {
       currentPreviewUrl = hit.previewUrl;
       previewBtn.style.display = 'inline-flex';
     }
-  } catch (e) { showToast('API錯誤：' + e.message, 'error'); }
+  };
+  script.onerror = () => { delete window[cbName]; script.remove(); };
+  document.body.appendChild(script);
 }
 function togglePreview() {
   if (!currentPreviewUrl) return;

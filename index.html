@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎤 KaraokeDB</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>🎤 RiMusic</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
@@ -259,6 +260,12 @@ header {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 5px;
+  cursor: pointer;
+  display: inline-block;
+  transition: opacity .15s;
+}
+.song-header h1:hover {
+  opacity: .75;
 }
 .song-header .artist {
   color: var(--muted);
@@ -534,7 +541,7 @@ rt {
 <body>
 <header>
   <button class="menu-btn" onclick="toggleSidebar()">&#9776;</button>
-  <div class="logo">&#127908; KaraokeDB</div>
+  <div class="logo">&#127908; RiMusic</div>
 
 </header>
 <div class="app">
@@ -612,7 +619,7 @@ function renderLyrics(song) {
   const showRt = localStorage.getItem('showRt') !== 'false';
   document.getElementById('lyricsPanel').innerHTML = `
     <div class="song-header">
-      <h1>${esc(song.title)}</h1>
+      <h1 onclick="copyTitle(currentSong.title)" title="點擊複製歌名">${esc(song.title)}</h1>
       <div class="artist">${esc(song.artist || '—')}</div>
       <div class="chips">
         ${song.joysound_id ? `<span class="chip"> #${esc(song.joysound_id)}</span>` : ''}
@@ -655,6 +662,13 @@ function showToast(msg, type = 'success') {
   t.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${esc(msg)}`;
   document.getElementById('toastContainer').appendChild(t);
   setTimeout(() => t.remove(), 3000);
+}
+function copyTitle(title) {
+  navigator.clipboard.writeText(title).then(() => {
+    showToast('已複製：' + title);
+  }).catch(() => {
+    showToast('複製失敗', 'error');
+  });
 }
 function debounce(fn, ms) {
   let timer;

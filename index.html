@@ -1093,7 +1093,7 @@ async function loadCoverArt(title, artist) {
   if (!img) return;
   try {
     const q   = encodeURIComponent(`${artist || ''} ${title}`);
-    const res = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`, { credentials: 'omit', mode: 'cors' });
     const { results } = await res.json();
     if (!results || !results.length) return;
     const hit = results[0];

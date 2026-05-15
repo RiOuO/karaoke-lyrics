@@ -1090,8 +1090,8 @@ function renderLyrics(song) {
 async function loadCoverArt(title, artist) {
   const token = ++coverArtToken;
   const q      = encodeURIComponent(`${artist || ''} ${title}`.trim());
-  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=5&country=TW`;
-  const urls   = [apiUrl, `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`];
+  const apiUrl = `https://itunes-proxy.aaron100396.workers.dev/?term=${q}&media=music&limit=5&country=TW`;
+  const urls   = [apiUrl];
   let data;
   while (!data) {
     if (token !== coverArtToken) return;

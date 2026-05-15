@@ -1113,7 +1113,7 @@ async function loadCoverArt(title, artist) {
       currentPreviewUrl = hit.previewUrl;
       previewBtn.style.display = 'inline-flex';
     }
-  } catch (_) {}
+  } catch (e) { showToast('API錯誤：' + e.message, 'error'); }
 }
 function togglePreview() {
   if (!currentPreviewUrl) return;

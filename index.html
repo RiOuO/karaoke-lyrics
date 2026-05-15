@@ -1084,40 +1084,7 @@ function renderLyrics(song) {
             `<span class="line">${l.trim() ? parseRuby(l) : '&nbsp;'}</span>`).join('')
         : '<span class="no-lyrics">尚未新增歌詞</span>'
     }</div>`;
-  applyMediaInfo(song);
-}
-function applyMediaInfo(song) {
-  const img        = document.getElementById('coverImg');
-  const ph         = document.getElementById('coverPlaceholder');
-  const btn        = document.getElementById('appleMusicBtn');
-  const previewBtn = document.getElementById('previewBtn');
-  if (song.artwork_url && img) {
-    img.onload  = () => { img.classList.add('loaded'); if (ph) ph.style.opacity = '0'; };
-    img.onerror = () => {};
-    img.src = song.artwork_url;
-  }
-  if (btn && song.apple_music_url) {
-    btn.href = song.apple_music_url;
-    btn.style.display = 'inline-flex';
-  }
-  if (previewBtn && song.preview_url) {
-    currentPreviewUrl = song.preview_url;
-    previewBtn.style.display = 'inline-flex';
-  }
-  if (!song.artwork_url && !song.apple_music_url && !song.preview_url) {
-    loadCoverArt(song.title, song.artist);
-  }
-}
-async function itunesFetch(term, country) {
-  const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=5&country=${country}`;
-  for (const url of [apiUrl, `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`]) {
-    try {
-      const res  = await fetch(url);
-      const json = await res.json();
-      if (json && json.results && json.results.length) return json.results;
-    } catch { continue; }
-  }
-  return [];
+  loadCoverArt(song.title, song.artist);
 }
 async function loadCoverArt(title, artist) {
   const img        = document.getElementById('coverImg');
@@ -1125,24 +1092,23 @@ async function loadCoverArt(title, artist) {
   const btn        = document.getElementById('appleMusicBtn');
   const previewBtn = document.getElementById('previewBtn');
   if (!img) return;
-  const full  = artist ? `${artist} ${title}` : title;
-  const steps = [
-    [full,  'TW'],
-    ...(artist ? [[title, 'TW']] : []),
-    [full,  'JP'],
-    ...(artist ? [[title, 'JP']] : []),
+  const q      = encodeURIComponent(`${artist || ''} ${title}`.trim());
+  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=5&country=TW`;
+  const urls   = [
+    apiUrl,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
   ];
-  let results = [];
-  let usedStep = '';
-  for (const [term, country] of steps) {
-    results = await itunesFetch(term, country);
-    if (results.length) { usedStep = `"${term}" (${country})`; break; }
+  let data;
+  for (const url of urls) {
+    try {
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (json && json.results && json.results.length) { data = json; break; }
+    } catch { continue; }
   }
-  if (!results.length) {
-    showToast(`找不到：${full}`, 'error');
-    return;
-  }
-  const hit = results[0];
+  if (!data) { showToast(`找不到：${title}`, 'error'); return; }
+  const hit = data.results[0];
   if (hit.artworkUrl100) {
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
     img.onload  = () => { img.classList.add('loaded'); if (ph) ph.style.opacity = '0'; };

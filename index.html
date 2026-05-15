@@ -1122,14 +1122,19 @@ async function loadCoverArt(title, artist) {
     `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`,
   ];
   let data;
+  const errors = [];
   for (const url of urls) {
     try {
       const res = await fetch(url);
       const json = await res.json();
       if (json && json.results) { data = json; break; }
-    } catch { continue; }
+      errors.push(`${url.slice(0,40)}… 無結果`);
+    } catch (e) { errors.push(`${url.slice(0,40)}… ${e.message}`); }
   }
-  if (!data || !data.results || !data.results.length) return;
+  if (!data || !data.results || !data.results.length) {
+    showToast(errors.join(' | '), 'error');
+    return;
+  }
   const hit = data.results[0];
   if (hit.artworkUrl100) {
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');

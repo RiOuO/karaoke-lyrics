@@ -966,6 +966,7 @@ let allSongs = [];
 let filterGuide = false;
 let previewAudio = null;
 let currentPreviewUrl = null;
+let coverArtToken = 0;
 const GUIDE_ICON = `<svg class="guide-icon" width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.75" stroke="#fc3c44" stroke-width="1.25"/><path d="M3.5 6.5L5.5 8.5L9.5 4.5" stroke="#fc3c44" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 window.addEventListener('DOMContentLoaded', () => {
   db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1087,32 +1088,36 @@ function renderLyrics(song) {
   loadCoverArt(song.title, song.artist);
 }
 async function loadCoverArt(title, artist) {
+  const token = ++coverArtToken;
+  const q      = encodeURIComponent(`${artist || ''} ${title}`.trim());
+  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=5&country=TW`;
+  const urls   = [apiUrl, `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`];
+  let data;
+  while (!data) {
+    if (token !== coverArtToken) return;
+    let gotResponse = false;
+    for (const url of urls) {
+      try {
+        const res  = await fetch(url);
+        const json = await res.json();
+        if (json && json.results !== undefined) {
+          gotResponse = true;
+          if (json.results.length) { data = json; break; }
+        }
+      } catch { continue; }
+    }
+    if (!data) {
+      if (gotResponse) return;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  if (token !== coverArtToken) return;
   const img        = document.getElementById('coverImg');
   const ph         = document.getElementById('coverPlaceholder');
   const btn        = document.getElementById('appleMusicBtn');
   const previewBtn = document.getElementById('previewBtn');
-  if (!img) return;
-  const q      = encodeURIComponent(`${artist || ''} ${title}`.trim());
-  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=5&country=TW`;
-  const urls   = [
-    apiUrl,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-  ];
-  let data;
-  const log = [];
-  for (const url of urls) {
-    const label = url.includes('allorigins') ? 'allorigins' : url.includes('corsproxy') ? 'corsproxy' : 'direct';
-    try {
-      const res  = await fetch(url);
-      const json = await res.json();
-      if (json && json.results && json.results.length) { data = json; log.push(`✓${label}`); break; }
-      log.push(`${label}:0筆`);
-    } catch (e) { log.push(`${label}:${e.message.slice(0,12)}`); }
-  }
-  if (!data) { showToast(`[${log.join(' ')}]`, 'error'); return; }
-  showToast(`✓ ${log[log.length-1]}`, 'success');
   const hit = data.results[0];
-  if (hit.artworkUrl100) {
+  if (img && hit.artworkUrl100) {
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
     img.onload  = () => { img.classList.add('loaded'); if (ph) ph.style.opacity = '0'; };
     img.onerror = () => {};

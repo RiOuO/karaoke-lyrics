@@ -1110,20 +1110,14 @@ function applyMediaInfo(song) {
 }
 async function itunesFetch(term, country) {
   const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=5&country=${country}`;
-  const timeout = new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 6000));
-  const tryUrl = (url) => Promise.race([
-    fetch(url).then(r => r.json()).then(json => {
+  for (const url of [apiUrl, `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`]) {
+    try {
+      const res  = await fetch(url);
+      const json = await res.json();
       if (json && json.results && json.results.length) return json.results;
-      throw new Error('empty');
-    }),
-    timeout,
-  ]);
-  try {
-    return await Promise.any([
-      tryUrl(apiUrl),
-      tryUrl(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`),
-    ]);
-  } catch { return []; }
+    } catch { continue; }
+  }
+  return [];
 }
 async function loadCoverArt(title, artist) {
   const img        = document.getElementById('coverImg');
@@ -1148,7 +1142,6 @@ async function loadCoverArt(title, artist) {
     showToast(`找不到：${full}`, 'error');
     return;
   }
-  showToast(`找到：${usedStep}`, 'success');
   const hit = results[0];
   if (hit.artworkUrl100) {
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');

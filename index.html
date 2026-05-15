@@ -1108,41 +1108,41 @@ function applyMediaInfo(song) {
     loadCoverArt(song.title, song.artist);
   }
 }
+async function itunesFetch(term, country) {
+  const apiUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=5&country=${country}`;
+  const urls = [
+    apiUrl,
+    `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
+  ];
+  for (const url of urls) {
+    try {
+      const res  = await fetch(url);
+      const json = await res.json();
+      if (json && json.results && json.results.length) return json.results;
+    } catch { continue; }
+  }
+  return [];
+}
 async function loadCoverArt(title, artist) {
   const img        = document.getElementById('coverImg');
   const ph         = document.getElementById('coverPlaceholder');
   const btn        = document.getElementById('appleMusicBtn');
   const previewBtn = document.getElementById('previewBtn');
   if (!img) return;
-  const q      = encodeURIComponent(`${artist || ''} ${title}`);
-  const apiUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=3&country=TW`;
-  const urls = [
-    apiUrl,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-    `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-  ];
-  let data;
-  const errors = [];
-  for (const url of urls) {
-    try {
-      const res = await fetch(url);
-      const json = await res.json();
-      if (json && json.results) { data = json; break; }
-      errors.push(`${url.slice(0,40)}… 無結果`);
-    } catch (e) { errors.push(`${url.slice(0,40)}… ${e.message}`); }
-  }
-  if (!data || !data.results || !data.results.length) {
-    showToast(errors.join(' | '), 'error');
-    return;
-  }
-  const hit = data.results[0];
+  const full  = artist ? `${artist} ${title}` : title;
+  let results = await itunesFetch(full, 'TW');
+  if (!results.length && artist)  results = await itunesFetch(title, 'TW');
+  if (!results.length)            results = await itunesFetch(full, 'JP');
+  if (!results.length && artist)  results = await itunesFetch(title, 'JP');
+  if (!results.length) return;
+  const hit = results[0];
   if (hit.artworkUrl100) {
     const art = hit.artworkUrl100.replace('100x100bb', '600x600bb');
     img.onload  = () => { img.classList.add('loaded'); if (ph) ph.style.opacity = '0'; };
     img.onerror = () => {};
     img.src = art;
   }
-  if (btn && hit.trackViewUrl) { btn.href = hit.trackViewUrl; btn.style.display = 'inline-flex'; }
+  if (btn && hit.trackViewUrl)   { btn.href = hit.trackViewUrl; btn.style.display = 'inline-flex'; }
   if (previewBtn && hit.previewUrl) { currentPreviewUrl = hit.previewUrl; previewBtn.style.display = 'inline-flex'; }
 }
 function togglePreview() {
